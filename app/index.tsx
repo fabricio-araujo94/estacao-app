@@ -34,6 +34,35 @@ export default function Index() {
         <Text style={styles.hour}>10:30</Text>
       </View>
 
+      <View style={[styles.infoViewTop, styles.shadowProp]}>
+        <View style={styles.infoView}>
+          <Image
+            style={styles.icon}
+            source={require('@/assets/images/sea-drop.png')}
+          />
+          <Text style={styles.infoNumber}>30%</Text>
+          <Text style={styles.infoLabel}>Umidade</Text>
+        </View>
+        
+        <View style={styles.infoView}>
+          <Image
+            style={styles.icon}
+            source={require('@/assets/images/barometer.png')}
+          />
+          <Text style={styles.infoNumber}>5 atm</Text>
+          <Text style={styles.infoLabel}>Pressão Atmosférica</Text>
+        </View>
+        
+        <View style={styles.infoView}>
+          <Image
+            style={styles.icon}
+            source={require('@/assets/images/umbrella.png')}
+          />
+          <Text style={styles.infoNumber}>30%</Text>
+          <Text style={styles.infoLabel}>Chuva</Text>
+        </View>
+      </View>
+
       <View style={styles.inline}>
         <ButtonTouchable
           onClick={() => {}}
@@ -70,6 +99,10 @@ const styles = StyleSheet.create({
     width: 122,
     height: 122,
   },
+  icon: {
+    width: 24,
+    height: 24
+  },
   bigText: {
     fontSize: 64,
     top: -16,
@@ -98,5 +131,36 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Caprasimo',
     opacity: 0.53
-  }
+  },
+  infoViewTop: {
+    flexDirection: 'row',
+    width: 334,
+    height: 107,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 150,
+    borderColor: '#000000',
+    borderWidth: 0.5,
+    boxShadow: 'rgba(0,0,0,0.75)'
+  },
+  infoView: {
+    flex: 1,
+    width: 105,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoNumber: {
+    fontSize: 16,
+    fontFamily: 'Itim'
+  },
+  infoLabel: {
+    fontSize: 13,
+    fontFamily: 'Itim',
+    opacity: 0.7,
+    textAlign: 'center'
+  },
+  shadowProp: {
+    elevation: 10,
+    shadowColor: '#000000',
+    shadowOffset: {width: -2, height: 4}
+  },
 })
