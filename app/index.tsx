@@ -29,6 +29,11 @@ export default function Index() {
         <Text style={styles.bigText}>30°C</Text>
       </View>
 
+      <View style={styles.top}>
+        <Text style={styles.local}>Maracanaú - Ceará</Text>
+        <Text style={styles.hour}>10:30</Text>
+      </View>
+
       <View style={styles.inline}>
         <ButtonTouchable
           onClick={() => {}}
@@ -58,7 +63,8 @@ const styles = StyleSheet.create({
     //flex: 1,
     width: 273,
     flexDirection: 'row',
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    paddingBottom: 50
   },
   image: {
     width: 122,
@@ -72,9 +78,25 @@ const styles = StyleSheet.create({
   top: {
     flex: 1,
     width: '50%',
-    height: 172,
+    height: 174,
     justifyContent: 'center',
     alignItems: 'center',
-    
+  },
+  top2: {
+    flex: 1,
+    width: '50%',
+    height: 41,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  local: {
+    fontSize: 15,
+    fontFamily: 'Itim',
+    opacity: 0.67
+  },
+  hour: {
+    fontSize: 24,
+    fontFamily: 'Caprasimo',
+    opacity: 0.53
   }
 })

@@ -7,7 +7,8 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    'Itim': require('@/assets/fonts/Itim-Regular.ttf')
+    'Itim': require('@/assets/fonts/Itim-Regular.ttf'),
+    'Caprasimo': require('@/assets/fonts/Caprasimo-Regular.ttf')
   })
 
   useEffect(() => {
@@ -19,6 +20,6 @@ export default function RootLayout() {
   if (!loaded && !error) {
     return null;
   }
-  
+
   return <Stack />;
 }
