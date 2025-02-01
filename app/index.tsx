@@ -4,18 +4,11 @@ import { ThemedView } from "@/components/ThemedView";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
-
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
 export default function Index() {
   return (
-    <ThemedView
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
+    <ThemedView style={styles.container}>
       <LinearGradient 
         colors={['#FFFFFF', "#999999"]}
         style={styles.background}
@@ -29,12 +22,12 @@ export default function Index() {
         <Text style={styles.bigText}>30°C</Text>
       </View>
 
-      <View style={styles.top}>
+      <View style={styles.top2}>
         <Text style={styles.local}>Maracanaú - Ceará</Text>
         <Text style={styles.hour}>10:30</Text>
       </View>
 
-      <View style={[styles.infoViewTop, styles.shadowProp]}>
+      <View style={styles.infoViewTop}>
         <View style={styles.infoView}>
           <Image
             style={styles.icon}
@@ -81,56 +74,35 @@ export default function Index() {
 
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1, 
+    width: '100%',
+    height: '100%',
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+  },
   background: {
-    position: 'absolute',
+    position: 'absolute', 
     left: 0,
     right: 0,
     top: 0,
     height: '100%',
-  },
-  inline: {
-    //flex: 1,
-    width: 273,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: 50
-  },
-  image: {
-    width: 122,
-    height: 122,
-  },
-  icon: {
-    width: 24,
-    height: 24
-  },
-  bigText: {
-    fontSize: 64,
-    top: -16,
-    fontFamily: 'Itim'
+    zIndex: -1,
   },
   top: {
-    flex: 1,
-    width: '50%',
-    height: 174,
+    width: 135,
+    height: 172,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 40, 
   },
   top2: {
-    flex: 1,
-    width: '50%',
+    width: 130,
     height: 41,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  local: {
-    fontSize: 15,
-    fontFamily: 'Itim',
-    opacity: 0.67
-  },
-  hour: {
-    fontSize: 24,
-    fontFamily: 'Caprasimo',
-    opacity: 0.53
+    marginTop: 10,
+    marginBottom: 120
   },
   infoViewTop: {
     flexDirection: 'row',
@@ -140,7 +112,12 @@ const styles = StyleSheet.create({
     borderRadius: 150,
     borderColor: '#000000',
     borderWidth: 0.5,
-    boxShadow: 'rgba(0,0,0,0.75)'
+    elevation: 10, // Sombra para Android
+    shadowColor: '#000000', // Sombra para iOS
+    shadowOffset: { width: -2, height: 4 },
+    shadowOpacity: 0.75,
+    shadowRadius: 4,
+    marginBottom: 90,
   },
   infoView: {
     flex: 1,
@@ -148,19 +125,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  inline: {
+    width: 273,
+    height: 100,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 40, 
+  },
+  image: {
+    width: 122,
+    height: 122,
+    marginTop: 20,
+  },
+  icon: {
+    width: 24,
+    height: 24,
+  },
+  bigText: {
+    fontSize: 64,
+    top: -16,
+    fontFamily: 'Itim',
+  },
+  local: {
+    fontSize: 15,
+    fontFamily: 'Itim',
+    opacity: 0.67,
+  },
+  hour: {
+    fontSize: 24,
+    fontFamily: 'Caprasimo',
+    opacity: 0.53,
+  },
   infoNumber: {
     fontSize: 16,
-    fontFamily: 'Itim'
+    fontFamily: 'Itim',
   },
   infoLabel: {
     fontSize: 13,
     fontFamily: 'Itim',
     opacity: 0.7,
-    textAlign: 'center'
-  },
-  shadowProp: {
-    elevation: 10,
-    shadowColor: '#000000',
-    shadowOffset: {width: -2, height: 4}
+    textAlign: 'center',
   },
 })
