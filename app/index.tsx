@@ -1,12 +1,51 @@
+import { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
+
+import Paho from 'paho-mqtt'
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
+
+const client = new Paho.Client(
+  'broker.hivemq.com',
+  Number(8000),
+  `mqtt-async-test-${parseInt(String(Math.random() * 100).toString())}`
+)
+
 export default function Index() {
+  const [message, setMessage] = useState('teste')
+  const [topic, setTopic] = useState('estacao')
+  
+  function onMessage(newMessage: Paho.Message) {
+    if(newMessage.destinationName === topic) {
+      setMessage(newMessage.payloadString)
+    }
+  }
+
+  function changeValue(c: Paho.Client) {
+    const newMessage = new Paho.Message(message)
+    newMessage.destinationName = topic
+    c.send(newMessage)
+  }
+
+  useEffect(() => {
+    client.connect({
+      onSuccess: () => {
+        console.log("Connected")
+        client.subscribe(topic)
+        client.onMessageArrived = onMessage
+      },
+      onFailure: () => {
+        console.log("Failed to connect")
+      }
+    })
+  }, [])
+  
+  
   return (
     <ThemedView style={styles.container}>
       <LinearGradient 
@@ -58,7 +97,7 @@ export default function Index() {
 
       <View style={styles.inline}>
         <ButtonTouchable
-          onClick={() => {}}
+          onClick={() => changeValue(client)}
           icon='window'
         />
 
