@@ -17,26 +17,43 @@ const client = new Paho.Client(
 )
 
 export default function Index() {
-  const [message, setMessage] = useState('teste')
+  const [temperature, setTemperature] = useState('38°C')
+  const [humidity, setHumidity] = useState('30%')
+  const [pressure, setPressure] = useState('5 atm')
+  const [rain, setRain] = useState('30%')
   const [topic, setTopic] = useState('estacao')
   
   function onMessage(newMessage: Paho.Message) {
-    if(newMessage.destinationName === topic) {
-      setMessage(newMessage.payloadString)
+    if(newMessage.destinationName === 'estacao/temperature') {
+      setTemperature(newMessage.payloadString)
+    }
+
+    if(newMessage.destinationName === 'estacao/humidity') {
+      setHumidity(newMessage.payloadString)
+    }
+
+    if(newMessage.destinationName === 'estacao/pressure') {
+      setPressure(newMessage.payloadString)
+    }
+
+    if(newMessage.destinationName === 'estacao/rain') {
+      setRain(newMessage.payloadString)
     }
   }
 
   function changeValue(c: Paho.Client) {
+    /*
     const newMessage = new Paho.Message(message)
     newMessage.destinationName = topic
     c.send(newMessage)
+    */
   }
 
   useEffect(() => {
     client.connect({
       onSuccess: () => {
         console.log("Connected")
-        client.subscribe(topic)
+        client.subscribe('estacao/#')
         client.onMessageArrived = onMessage
       },
       onFailure: () => {
@@ -58,7 +75,7 @@ export default function Index() {
           style={styles.image}
           source={require('@/assets/images/cloud-rain.svg')}
         />
-        <Text style={styles.bigText}>30°C</Text>
+        <Text style={styles.bigText}>{temperature}</Text>
       </View>
 
       <View style={styles.top2}>
@@ -72,7 +89,7 @@ export default function Index() {
             style={styles.icon}
             source={require('@/assets/images/sea-drop.png')}
           />
-          <Text style={styles.infoNumber}>30%</Text>
+          <Text style={styles.infoNumber}>{humidity}</Text>
           <Text style={styles.infoLabel}>Umidade</Text>
         </View>
         
@@ -81,7 +98,7 @@ export default function Index() {
             style={styles.icon}
             source={require('@/assets/images/barometer.png')}
           />
-          <Text style={styles.infoNumber}>5 atm</Text>
+          <Text style={styles.infoNumber}>{pressure}</Text>
           <Text style={styles.infoLabel}>Pressão Atmosférica</Text>
         </View>
         
@@ -90,7 +107,7 @@ export default function Index() {
             style={styles.icon}
             source={require('@/assets/images/umbrella.png')}
           />
-          <Text style={styles.infoNumber}>30%</Text>
+          <Text style={styles.infoNumber}>{rain}</Text>
           <Text style={styles.infoLabel}>Chuva</Text>
         </View>
       </View>
