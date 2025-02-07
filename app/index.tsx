@@ -29,26 +29,32 @@ export default function Index() {
   function onMessage(newMessage: Paho.Message) {
     if (newMessage.destinationName === "estacao/temperature") {
       setTemperature(newMessage.payloadString);
+      saveFile(newMessage.payloadString, 'temperature.txt');
     }
 
     if (newMessage.destinationName === "estacao/humidity") {
       setHumidity(newMessage.payloadString);
+      saveFile(newMessage.payloadString, 'humidity.txt');
     }
 
     if (newMessage.destinationName === "estacao/pressure") {
       setPressure(newMessage.payloadString);
+      saveFile(newMessage.payloadString, 'pressure.txt');
     }
 
     if (newMessage.destinationName === "estacao/rain") {
       setRain(newMessage.payloadString);
+      saveFile(newMessage.payloadString, 'rain.txt');
     }
 
     if (newMessage.destinationName === "estacao/window") {
       setWindow(newMessage.payloadString === 'true');
+      saveFile(newMessage.payloadString, 'window.txt');
     }
     
     if (newMessage.destinationName === "estacao/clothesHanging") {
       setClothesHanging(newMessage.payloadString === 'true');
+      saveFile(newMessage.payloadString, 'clothesHanging.txt');
     }
   }
 
