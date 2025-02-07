@@ -167,13 +167,15 @@ export default function Index() {
 
       <View style={styles.inline}>
         <ButtonTouchable onClick={() => {
-          changeState(client, 'estacao/window', !window)
-          setWindow(!window)
+          changeState(client, 'estacao/window', !window);
+          saveFile(String(!window), 'window.txt');
+          setWindow(!window);
         }} icon="window" />
 
         <ButtonTouchable onClick={() => {
-          changeState(client, 'estacao/clothesHanging', !clothesHanging)
-          setClothesHanging(!clothesHanging)
+          changeState(client, 'estacao/clothesHanging', !clothesHanging);
+          saveFile(String(!clothesHanging), 'clothesHanging.txt');
+          setClothesHanging(!clothesHanging);
         }} icon="clothes" />
       </View>
     </ThemedView>
