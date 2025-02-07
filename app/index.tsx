@@ -4,6 +4,8 @@ import { ThemedView } from "@/components/ThemedView";
 
 import Paho from "paho-mqtt";
 
+import { File, Paths } from 'expo-file-system/next'
+
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
@@ -54,6 +56,38 @@ export default function Index() {
     const newMessage = new Paho.Message(message.toString());
     newMessage.destinationName = topic;
     c.send(newMessage);
+  }
+
+  function saveFile(value: string, directory: string) {
+    try {
+      const file = new File(Paths.document, directory);
+      
+      if(!file.exists) {
+        file.create();
+      }
+
+      file.write(value);
+    } catch (error: any) {
+      console.log('Error: ' + error.message)
+    }
+  }
+
+  function readFile(directory: string): string {
+    var message: string = ''
+    
+    try {
+      const file = new File(Paths.document, directory);
+      
+      if(!file.exists) {
+        file.create();
+      }
+
+      message = file.text();
+    } catch (error: any) {
+      console.log('Error: ' + error.message)
+    }
+
+    return message
   }
 
   useEffect(() => {
