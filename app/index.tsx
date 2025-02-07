@@ -107,6 +107,13 @@ export default function Index() {
         console.log("Failed to connect");
       },
     });
+
+    setTemperature(readFile('temperature.txt'));
+    setHumidity(readFile('humidity.txt'));
+    setPressure(readFile('pressure.txt'));
+    setRain(readFile('rain.txt'));
+    setWindow(readFile('window.txt') === 'true');
+    setClothesHanging(readFile('clothesHanging.txt') === 'true');
   }, []);
 
   return (
