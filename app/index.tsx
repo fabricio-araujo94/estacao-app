@@ -11,6 +11,10 @@ import { Image } from "expo-image";
 
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
+import { MMKV, useMMKVString, useMMKVBoolean } from 'react-native-mmkv'
+
+export const storage = new MMKV()
+
 const client = new Paho.Client(
   "broker.hivemq.com",
   Number(8000),
@@ -18,43 +22,43 @@ const client = new Paho.Client(
 );
 
 export default function Index() {
-  const [temperature, setTemperature] = useState("38°C");
-  const [humidity, setHumidity] = useState("30%");
-  const [pressure, setPressure] = useState("5 atm");
-  const [rain, setRain] = useState("30%");
-  const [window, setWindow] = useState(true);
-  const [clothesHanging, setClothesHanging] = useState(true);
+  const [temperature, setTemperature] = useMMKVString("temperature");
+  const [humidity, setHumidity] = useMMKVString("humidity");
+  const [pressure, setPressure] = useMMKVString("pressure");
+  const [rain, setRain] = useMMKVString("rain");
+  const [window, setWindow] = useMMKVBoolean("window");
+  const [clothesHanging, setClothesHanging] = useMMKVBoolean("clothesHanging");
   const [topic, setTopic] = useState("estacao");
 
   function onMessage(newMessage: Paho.Message) {
     if (newMessage.destinationName === "estacao/temperature") {
       setTemperature(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'temperature.txt');
+      saveFile(newMessage.payloadString, 'temperature');
     }
 
     if (newMessage.destinationName === "estacao/humidity") {
       setHumidity(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'humidity.txt');
+      saveFile(newMessage.payloadString, 'humidity');
     }
 
     if (newMessage.destinationName === "estacao/pressure") {
       setPressure(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'pressure.txt');
+      saveFile(newMessage.payloadString, 'pressure');
     }
 
     if (newMessage.destinationName === "estacao/rain") {
       setRain(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'rain.txt');
+      saveFile(newMessage.payloadString, 'rain');
     }
 
     if (newMessage.destinationName === "estacao/window") {
       setWindow(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'window.txt');
+      saveFile(newMessage.payloadString, 'window');
     }
     
     if (newMessage.destinationName === "estacao/clothesHanging") {
       setClothesHanging(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'clothesHanging.txt');
+      saveFile(newMessage.payloadString, 'clothesHanging');
     }
   }
 
@@ -64,36 +68,17 @@ export default function Index() {
     c.send(newMessage);
   }
 
-  function saveFile(value: string, directory: string) {
-    try {
-      const file = new File(Paths.document, directory);
-      
-      if(!file.exists) {
-        file.create();
-      }
-
-      file.write(value);
-    } catch (error: any) {
-      console.log('Error: ' + error.message)
-    }
+  function saveFile(value: string | boolean, directory: string) {
+    storage.set(directory, value)
   }
 
-  function readFile(directory: string): string {
-    var message: string = ''
-    
-    try {
-      const file = new File(Paths.document, directory);
-      
-      if(!file.exists) {
-        file.create();
-      }
-
-      message = file.text();
-    } catch (error: any) {
-      console.log('Error: ' + error.message)
+  function readFileString(directory: string): string {
+    const message = storage.getString(directory)
+    if(typeof message === "string") {
+      return message
     }
 
-    return message
+    return ""
   }
 
   useEffect(() => {
@@ -107,13 +92,6 @@ export default function Index() {
         console.log("Failed to connect");
       },
     });
-
-    setTemperature(readFile('temperature.txt'));
-    setHumidity(readFile('humidity.txt'));
-    setPressure(readFile('pressure.txt'));
-    setRain(readFile('rain.txt'));
-    setWindow(readFile('window.txt') === 'true');
-    setClothesHanging(readFile('clothesHanging.txt') === 'true');
   }, []);
 
   return (
@@ -168,14 +146,12 @@ export default function Index() {
       <View style={styles.inline}>
         <ButtonTouchable onClick={() => {
           changeState(client, 'estacao/window', !window);
-          saveFile(String(!window), 'window.txt');
-          setWindow(!window);
+          saveFile(!window, 'window');
         }} icon="window" />
 
         <ButtonTouchable onClick={() => {
           changeState(client, 'estacao/clothesHanging', !clothesHanging);
-          saveFile(String(!clothesHanging), 'clothesHanging.txt');
-          setClothesHanging(!clothesHanging);
+          saveFile(!clothesHanging, 'clothesHanging');
         }} icon="clothes" />
       </View>
     </ThemedView>
