@@ -11,9 +11,7 @@ import { Image } from "expo-image";
 
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
-import { MMKV, useMMKVString, useMMKVBoolean } from 'react-native-mmkv'
-
-export const storage = new MMKV()
+import * as FileSystem from 'expo-file-system'
 
 const client = new Paho.Client(
   "broker.hivemq.com",
@@ -22,43 +20,43 @@ const client = new Paho.Client(
 );
 
 export default function Index() {
-  const [temperature, setTemperature] = useMMKVString("temperature");
-  const [humidity, setHumidity] = useMMKVString("humidity");
-  const [pressure, setPressure] = useMMKVString("pressure");
-  const [rain, setRain] = useMMKVString("rain");
-  const [window, setWindow] = useMMKVBoolean("window");
-  const [clothesHanging, setClothesHanging] = useMMKVBoolean("clothesHanging");
+  const [temperature, setTemperature] = useState("0°C");
+  const [humidity, setHumidity] = useState("0%");
+  const [pressure, setPressure] = useState("0 atm");
+  const [rain, setRain] = useState("0%");
+  const [window, setWindow] = useState(false);
+  const [clothesHanging, setClothesHanging] = useState(false);
   const [topic, setTopic] = useState("estacao");
 
   function onMessage(newMessage: Paho.Message) {
     if (newMessage.destinationName === "estacao/temperature") {
       setTemperature(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'temperature');
+      saveFile(newMessage.payloadString, 'temperature.txt');
     }
 
     if (newMessage.destinationName === "estacao/humidity") {
       setHumidity(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'humidity');
+      saveFile(newMessage.payloadString, 'humidity.txt');
     }
 
     if (newMessage.destinationName === "estacao/pressure") {
       setPressure(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'pressure');
+      saveFile(newMessage.payloadString, 'pressure.txt');
     }
 
     if (newMessage.destinationName === "estacao/rain") {
       setRain(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'rain');
+      saveFile(newMessage.payloadString, 'rain.txt');
     }
 
     if (newMessage.destinationName === "estacao/window") {
       setWindow(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'window');
+      saveFile(newMessage.payloadString, 'window.txt');
     }
     
     if (newMessage.destinationName === "estacao/clothesHanging") {
       setClothesHanging(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'clothesHanging');
+      saveFile(newMessage.payloadString, 'clothesHanging.txt');
     }
   }
 
@@ -68,30 +66,58 @@ export default function Index() {
     c.send(newMessage);
   }
 
-  function saveFile(value: string | boolean, directory: string) {
-    storage.set(directory, value)
+  const saveFile = async (value: string, directory: string) => {
+    const path = `${FileSystem.documentDirectory}${directory}`;
+    try {
+      await FileSystem.writeAsStringAsync(path, value);
+      console.log('Arquivo salvo!');
+    } catch (error) {
+      console.error('Erro ao salvar arquivo:', error);
+    }
   }
 
-  function readFileString(directory: string): string {
-    const message = storage.getString(directory)
-    if(typeof message === "string") {
-      return message
-    }
+  const readFileString = async (directory: string): Promise<string> => {
+    const path = `${FileSystem.documentDirectory}${directory}`;
+    
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(path);
+      
+      if (!fileInfo.exists) {
+        console.log('Arquivo não encontrado. Criando...');
+        await FileSystem.writeAsStringAsync(path, ''); // Cria o arquivo vazio
+      }
 
-    return ""
+      const content = await FileSystem.readAsStringAsync(path);
+
+      return content;
+    } catch (error) {
+      console.error('Erro ao ler arquivo:', error);
+      return "";
+    }
   }
 
   useEffect(() => {
-    client.connect({
-      onSuccess: () => {
-        console.log("Connected");
-        client.subscribe("estacao/#");
-        client.onMessageArrived = onMessage;
-      },
-      onFailure: () => {
-        console.log("Failed to connect");
-      },
-    });
+    const loadData = async () => {
+      client.connect({
+        onSuccess: () => {
+          console.log("Connected");
+          client.subscribe("estacao/#");
+          client.onMessageArrived = onMessage;
+        },
+        onFailure: () => {
+          console.log("Failed to connect");
+        },
+      });
+  
+      setTemperature(await readFileString("temperature.txt"))
+      setHumidity(await readFileString("humidity.txt"))
+      setPressure(await readFileString("pressure.txt"))
+      setRain(await readFileString("rain.txt"))
+      setWindow(Boolean(await readFileString("window.txt")))
+      setClothesHanging(Boolean(await readFileString("clothesHanging.txt")))
+    }
+
+    loadData()
   }, []);
 
   return (
@@ -146,12 +172,12 @@ export default function Index() {
       <View style={styles.inline}>
         <ButtonTouchable onClick={() => {
           changeState(client, 'estacao/window', !window);
-          saveFile(!window, 'window');
+          saveFile(String(!window), 'window.txt');
         }} icon="window" />
 
         <ButtonTouchable onClick={() => {
           changeState(client, 'estacao/clothesHanging', !clothesHanging);
-          saveFile(!clothesHanging, 'clothesHanging');
+          saveFile(String(!clothesHanging), 'clothesHanging.txt');
         }} icon="clothes" />
       </View>
     </ThemedView>
@@ -176,7 +202,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   top: {
-    width: 135,
+    width: '100%',
     height: 172,
     justifyContent: "center",
     alignItems: "center",
