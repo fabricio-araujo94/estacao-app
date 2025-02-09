@@ -4,15 +4,18 @@ import { ThemedView } from "@/components/ThemedView";
 
 import Paho from "paho-mqtt";
 
-import { File, Paths } from 'expo-file-system/next'
+import { File, Paths } from "expo-file-system/next";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
-import * as FileSystem from 'expo-file-system'
-import * as Notifications from 'expo-notifications';
+import * as FileSystem from "expo-file-system";
+import * as Notifications from "expo-notifications";
+
+import * as SQLite from "expo-sqlite";
+const db = SQLite.openDatabaseSync("estacao");
 
 const client = new Paho.Client(
   "broker.hivemq.com",
@@ -32,43 +35,46 @@ export default function Index() {
   function onMessage(newMessage: Paho.Message) {
     if (newMessage.destinationName === "estacao/temperature") {
       setTemperature(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'temperature.txt');
+      saveFile(newMessage.payloadString, "temperature.txt");
     }
 
     if (newMessage.destinationName === "estacao/humidity") {
       setHumidity(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'humidity.txt');
+      saveFile(newMessage.payloadString, "humidity.txt");
     }
 
     if (newMessage.destinationName === "estacao/pressure") {
       setPressure(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'pressure.txt');
+      saveFile(newMessage.payloadString, "pressure.txt");
     }
 
     if (newMessage.destinationName === "estacao/rain") {
       setRain(newMessage.payloadString);
-      saveFile(newMessage.payloadString, 'rain.txt');
+      saveFile(newMessage.payloadString, "rain.txt");
     }
 
     if (newMessage.destinationName === "estacao/window") {
-      setWindow(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'window.txt');
-      
-      if(newMessage.payloadString === 'true') {
-        sendNotificiation("Janelas", "Abrimos suas janelas.")
+      setWindow(newMessage.payloadString === "true");
+      saveFile(newMessage.payloadString, "window.txt");
+
+      if (newMessage.payloadString === "true") {
+        sendNotificiation("Janelas", "Abrimos suas janelas.");
       } else {
-        sendNotificiation("Janelas", "Fechamos suas janelas por causa da chuva.")
+        sendNotificiation(
+          "Janelas",
+          "Fechamos suas janelas por causa da chuva."
+        );
       }
     }
-    
-    if (newMessage.destinationName === "estacao/clothesHanging") {
-      setClothesHanging(newMessage.payloadString === 'true');
-      saveFile(newMessage.payloadString, 'clothesHanging.txt');
 
-      if(newMessage.payloadString === 'true') {
-        sendNotificiation("Varal", "Estendemos o varal.")
+    if (newMessage.destinationName === "estacao/clothesHanging") {
+      setClothesHanging(newMessage.payloadString === "true");
+      saveFile(newMessage.payloadString, "clothesHanging.txt");
+
+      if (newMessage.payloadString === "true") {
+        sendNotificiation("Varal", "Estendemos o varal.");
       } else {
-        sendNotificiation("Varal", "Recolhemos o varal por causa da chuva.")
+        sendNotificiation("Varal", "Recolhemos o varal por causa da chuva.");
       }
     }
   }
@@ -83,48 +89,45 @@ export default function Index() {
     const path = `${FileSystem.documentDirectory}${directory}`;
     try {
       await FileSystem.writeAsStringAsync(path, value);
-      console.log('Arquivo salvo!');
+      console.log("Arquivo salvo!");
     } catch (error) {
-      console.error('Erro ao salvar arquivo:', error);
+      console.error("Erro ao salvar arquivo:", error);
     }
-  }
+  };
 
   const readFileString = async (directory: string): Promise<string> => {
     const path = `${FileSystem.documentDirectory}${directory}`;
-    
+
     try {
       const fileInfo = await FileSystem.getInfoAsync(path);
-      
+
       if (!fileInfo.exists) {
-        console.log('Arquivo não encontrado. Criando...');
-        await FileSystem.writeAsStringAsync(path, ''); // Cria o arquivo vazio
+        console.log("Arquivo não encontrado. Criando...");
+        await FileSystem.writeAsStringAsync(path, ""); // Cria o arquivo vazio
       }
 
       const content = await FileSystem.readAsStringAsync(path);
 
       return content;
     } catch (error) {
-      console.error('Erro ao ler arquivo:', error);
+      console.error("Erro ao ler arquivo:", error);
       return "";
     }
-  }
+  };
 
   const requestNotificationPermission = async () => {
     const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Permissão para notificações negada!');
+    if (status !== "granted") {
+      alert("Permissão para notificações negada!");
     }
 
-    
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
         shouldPlaySound: false,
-        shouldSetBadge: false
-      })
-    })
-
-    console.log("Entramos")
+        shouldSetBadge: false,
+      }),
+    });
   };
 
   const sendNotificiation = (title: string, body: string) => {
@@ -135,11 +138,39 @@ export default function Index() {
       },
       trigger: null,
     });
+  };
+
+  const initializeDB = () => {
+    db.execSync(`CREATE TABLE IF NOT EXISTS estacao (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        temperature REAL,
+        humidity REAL,
+        pressure REAL,
+        rain REAL
+      );`);
+
+    console.log("DB ok")
+  };
+
+  const saveDataDB = async () => {
+    const result = await db.runAsync(
+      "INSERT INTO estacao (temperature, humidity, pressure, rain) VALUES (?, ?, ?, ?)",
+      [temperature, humidity, pressure, rain]
+    );
+  };
+
+  const getDataDB = async () => {
+    const allRows = await db.getAllAsync(`SELECT * FROM estacao`);
+
+    return allRows
   }
 
   useEffect(() => {
     const loadData = async () => {
-      requestNotificationPermission()
+      initializeDB();
+
+      requestNotificationPermission();
 
       client.connect({
         onSuccess: () => {
@@ -151,16 +182,16 @@ export default function Index() {
           console.log("Failed to connect");
         },
       });
-  
-      setTemperature(await readFileString("temperature.txt"))
-      setHumidity(await readFileString("humidity.txt"))
-      setPressure(await readFileString("pressure.txt"))
-      setRain(await readFileString("rain.txt"))
-      setWindow(Boolean(await readFileString("window.txt")))
-      setClothesHanging(Boolean(await readFileString("clothesHanging.txt")))
-    }
 
-    loadData()
+      setTemperature(await readFileString("temperature.txt"));
+      setHumidity(await readFileString("humidity.txt"));
+      setPressure(await readFileString("pressure.txt"));
+      setRain(await readFileString("rain.txt"));
+      setWindow(Boolean(await readFileString("window.txt")));
+      setClothesHanging(Boolean(await readFileString("clothesHanging.txt")));
+    };
+
+    loadData();
   }, []);
 
   return (
@@ -213,15 +244,23 @@ export default function Index() {
       </View>
 
       <View style={styles.inline}>
-        <ButtonTouchable onClick={() => {
-          changeState(client, 'estacao/window', !window);
-          saveFile(String(!window), 'window.txt');
-        }} icon="window" />
+        <ButtonTouchable
+          onClick={() => {
+            changeState(client, "estacao/window", !window);
+            saveFile(String(!window), "window.txt");
+            saveDataDB()
+          }}
+          icon="window"
+        />
 
-        <ButtonTouchable onClick={() => {
-          changeState(client, 'estacao/clothesHanging', !clothesHanging);
-          saveFile(String(!clothesHanging), 'clothesHanging.txt');
-        }} icon="clothes" />
+        <ButtonTouchable
+          onClick={() => {
+            changeState(client, "estacao/clothesHanging", !clothesHanging);
+            saveFile(String(!clothesHanging), "clothesHanging.txt");
+            getDataDB()
+          }}
+          icon="clothes"
+        />
       </View>
     </ThemedView>
   );
@@ -245,7 +284,7 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   top: {
-    width: '100%',
+    width: "100%",
     height: 172,
     justifyContent: "center",
     alignItems: "center",
