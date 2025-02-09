@@ -12,6 +12,7 @@ import { Image } from "expo-image";
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 
 import * as FileSystem from 'expo-file-system'
+import * as Notifications from 'expo-notifications';
 
 const client = new Paho.Client(
   "broker.hivemq.com",
@@ -52,11 +53,23 @@ export default function Index() {
     if (newMessage.destinationName === "estacao/window") {
       setWindow(newMessage.payloadString === 'true');
       saveFile(newMessage.payloadString, 'window.txt');
+      
+      if(newMessage.payloadString === 'true') {
+        sendNotificiation("Janelas", "Abrimos suas janelas.")
+      } else {
+        sendNotificiation("Janelas", "Fechamos suas janelas por causa da chuva.")
+      }
     }
     
     if (newMessage.destinationName === "estacao/clothesHanging") {
       setClothesHanging(newMessage.payloadString === 'true');
       saveFile(newMessage.payloadString, 'clothesHanging.txt');
+
+      if(newMessage.payloadString === 'true') {
+        sendNotificiation("Varal", "Estendemos o varal.")
+      } else {
+        sendNotificiation("Varal", "Recolhemos o varal por causa da chuva.")
+      }
     }
   }
 
@@ -96,8 +109,38 @@ export default function Index() {
     }
   }
 
+  const requestNotificationPermission = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Permissão para notificações negada!');
+    }
+
+    
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false
+      })
+    })
+
+    console.log("Entramos")
+  };
+
+  const sendNotificiation = (title: string, body: string) => {
+    Notifications.scheduleNotificationAsync({
+      content: {
+        title: title,
+        body: body,
+      },
+      trigger: null,
+    });
+  }
+
   useEffect(() => {
     const loadData = async () => {
+      requestNotificationPermission()
+
       client.connect({
         onSuccess: () => {
           console.log("Connected");
