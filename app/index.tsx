@@ -4,8 +4,6 @@ import { ThemedView } from "@/components/ThemedView";
 
 import Paho from "paho-mqtt";
 
-import { File, Paths } from "expo-file-system/next";
-
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
@@ -14,8 +12,7 @@ import { ButtonTouchable } from "@/components/ButtonTouchable";
 import * as FileSystem from "expo-file-system";
 import * as Notifications from "expo-notifications";
 
-import * as SQLite from "expo-sqlite";
-const db = SQLite.openDatabaseSync("estacao");
+import { initializeDB, saveDataDB, getDataDB } from "@/services/database";
 
 const client = new Paho.Client(
   "broker.hivemq.com",
@@ -140,32 +137,7 @@ export default function Index() {
     });
   };
 
-  const initializeDB = () => {
-    db.execSync(`CREATE TABLE IF NOT EXISTS estacao (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        temperature REAL,
-        humidity REAL,
-        pressure REAL,
-        rain REAL
-      );`);
-
-    console.log("DB ok")
-  };
-
-  const saveDataDB = async () => {
-    const result = await db.runAsync(
-      "INSERT INTO estacao (temperature, humidity, pressure, rain) VALUES (?, ?, ?, ?)",
-      [temperature, humidity, pressure, rain]
-    );
-  };
-
-  const getDataDB = async () => {
-    const allRows = await db.getAllAsync(`SELECT * FROM estacao`);
-
-    return allRows
-  }
-
+  
   useEffect(() => {
     const loadData = async () => {
       initializeDB();
@@ -248,7 +220,7 @@ export default function Index() {
           onClick={() => {
             changeState(client, "estacao/window", !window);
             saveFile(String(!window), "window.txt");
-            saveDataDB()
+            saveDataDB(temperature, humidity, pressure, rain)
           }}
           icon="window"
         />
