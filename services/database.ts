@@ -32,10 +32,20 @@ const saveDataDB = async (temperature: string, humidity: string, pressure: strin
     console.log(result)
 };
 
+const deleteDataDB = async() => {
+  const result = await db.runAsync(
+    "DELETE FROM estacao",
+  );
+
+  console.log("dados deletados")
+} 
+
 const getDataDB = async () => {
     const allRows = await db.getAllAsync(`SELECT * FROM estacao`);
+
+    console.log(allRows)
 
     return allRows
 }
 
-export { initializeDB, saveDataDB, getDataDB, State }
+export { initializeDB, saveDataDB, getDataDB, deleteDataDB, State }
