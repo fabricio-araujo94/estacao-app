@@ -1,18 +1,27 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
+import { ButtonTouchable } from "@/components/ButtonTouchable";
+import { Link } from "expo-router";
 
 import Paho from "paho-mqtt";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
-import { ButtonTouchable } from "@/components/ButtonTouchable";
+import {
+  initializeDB,
+  saveDataDB,
+  getDataDB,
+  deleteDataDB,
+} from "@/services/database";
 
-import * as FileSystem from "expo-file-system";
-import * as Notifications from "expo-notifications";
+import { saveFile, readFile } from "@/services/filesystem";
 
-import { initializeDB, saveDataDB, getDataDB } from "@/services/database";
+import {
+  requestNotificationPermission,
+  sendNotificiation,
+} from "@/services/notifications";
 
 const client = new Paho.Client(
   "broker.hivemq.com",
@@ -20,124 +29,62 @@ const client = new Paho.Client(
   `mqtt-async-test-${parseInt(String(Math.random() * 100).toString())}`
 );
 
+
 export default function Index() {
-  const [temperature, setTemperature] = useState("0°C");
-  const [humidity, setHumidity] = useState("0%");
-  const [pressure, setPressure] = useState("0 atm");
-  const [rain, setRain] = useState("0%");
-  const [window, setWindow] = useState(false);
-  const [clothesHanging, setClothesHanging] = useState(false);
-  const [topic, setTopic] = useState("estacao");
+  const [temperature, setTemperature] = useState("0");
+  const [humidity, setHumidity] = useState("0");
+  const [rain, setRain] = useState("0");
+  const [timestamp, setTimestamp] = useState("");
+  const [window, setWindow] = useState("open");
 
-  function onMessage(newMessage: Paho.Message) {
-    if (newMessage.destinationName === "estacao/temperature") {
-      setTemperature(newMessage.payloadString);
-      saveFile(newMessage.payloadString, "temperature.txt");
-    }
+  const onMessage = (newMessage: Paho.Message) => {
+    console.log(newMessage.payloadString)
+  }
 
-    if (newMessage.destinationName === "estacao/humidity") {
-      setHumidity(newMessage.payloadString);
-      saveFile(newMessage.payloadString, "humidity.txt");
-    }
-
-    if (newMessage.destinationName === "estacao/pressure") {
-      setPressure(newMessage.payloadString);
-      saveFile(newMessage.payloadString, "pressure.txt");
-    }
-
-    if (newMessage.destinationName === "estacao/rain") {
-      setRain(newMessage.payloadString);
-      saveFile(newMessage.payloadString, "rain.txt");
-    }
-
-    if (newMessage.destinationName === "estacao/window") {
-      setWindow(newMessage.payloadString === "true");
-      saveFile(newMessage.payloadString, "window.txt");
-
-      if (newMessage.payloadString === "true") {
-        sendNotificiation("Janelas", "Abrimos suas janelas.");
-      } else {
-        sendNotificiation(
-          "Janelas",
-          "Fechamos suas janelas por causa da chuva."
-        );
-      }
-    }
-
-    if (newMessage.destinationName === "estacao/clothesHanging") {
-      setClothesHanging(newMessage.payloadString === "true");
-      saveFile(newMessage.payloadString, "clothesHanging.txt");
-
-      if (newMessage.payloadString === "true") {
-        sendNotificiation("Varal", "Estendemos o varal.");
-      } else {
-        sendNotificiation("Varal", "Recolhemos o varal por causa da chuva.");
-      }
+  function changeState(c: Paho.Client, topic: string, message: string) {
+    try {
+      const newMessage = new Paho.Message(message);
+      newMessage.destinationName = topic;
+      c.send(newMessage);  
+    } catch (error: any) {
+      console.log("Error: ", error.message)
     }
   }
 
-  function changeState(c: Paho.Client, topic: string, message: boolean) {
-    const newMessage = new Paho.Message(message.toString());
-    newMessage.destinationName = topic;
-    c.send(newMessage);
-  }
-
-  const saveFile = async (value: string, directory: string) => {
-    const path = `${FileSystem.documentDirectory}${directory}`;
+  const fetchData = async () => {
     try {
-      await FileSystem.writeAsStringAsync(path, value);
-      console.log("Arquivo salvo!");
-    } catch (error) {
-      console.error("Erro ao salvar arquivo:", error);
-    }
-  };
-
-  const readFileString = async (directory: string): Promise<string> => {
-    const path = `${FileSystem.documentDirectory}${directory}`;
-
-    try {
-      const fileInfo = await FileSystem.getInfoAsync(path);
-
-      if (!fileInfo.exists) {
-        console.log("Arquivo não encontrado. Criando...");
-        await FileSystem.writeAsStringAsync(path, ""); // Cria o arquivo vazio
-      }
-
-      const content = await FileSystem.readAsStringAsync(path);
-
-      return content;
-    } catch (error) {
-      console.error("Erro ao ler arquivo:", error);
-      return "";
-    }
-  };
-
-  const requestNotificationPermission = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== "granted") {
-      alert("Permissão para notificações negada!");
-    }
-
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-      }),
-    });
-  };
-
-  const sendNotificiation = (title: string, body: string) => {
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: title,
-        body: body,
-      },
-      trigger: null,
-    });
-  };
-
+      // Primeira requisição
+      const sensorResponse = await fetch('http://automate-house-production.up.railway.app/sensor/last');
+      const sensorJson = await sensorResponse.json();
+      
+      // Atualizando o estado com as respostas do sensor
+      setTemperature(sensorJson.temperature);
+      setHumidity(sensorJson.humidity);
+      setTimestamp(sensorJson.timestamp);
+      
+      // Segunda requisição
+      const windowResponse = await fetch('http://automate-house-production.up.railway.app/window/state');
+      const windowJson = await windowResponse.json();
+      
+      // Atualizando o estado do estado da janela
+      setWindow(windowJson.state);
   
+      // Agora que o estado está atualizado, você pode salvar no banco de dados
+      saveFile(sensorJson.temperature, "temperature.txt");
+      saveFile(sensorJson.humidity, "humidity.txt");
+      saveFile(windowJson.state, "window.txt");
+      
+      // Salvar os dados no banco de dados, com os valores já obtidos
+      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
+      
+      // Exibir os dados do banco de dados (se necessário)
+      await getDataDB();
+  
+    } catch (error: any) {
+      console.log("Error ", error.message);
+    }
+  }
+
   useEffect(() => {
     const loadData = async () => {
       initializeDB();
@@ -155,15 +102,19 @@ export default function Index() {
         },
       });
 
-      setTemperature(await readFileString("temperature.txt"));
-      setHumidity(await readFileString("humidity.txt"));
-      setPressure(await readFileString("pressure.txt"));
-      setRain(await readFileString("rain.txt"));
-      setWindow(Boolean(await readFileString("window.txt")));
-      setClothesHanging(Boolean(await readFileString("clothesHanging.txt")));
+      setTemperature(await readFile("temperature.txt"));
+      setHumidity(await readFile("humidity.txt"));
+      setRain(await readFile("rain.txt"));
+      setWindow(await readFile("window.txt"));
     };
 
+  
     loadData();
+    
+    const interval = setInterval(fetchData, 10000);
+    
+    return () => clearInterval(interval);
+
   }, []);
 
   return (
@@ -178,7 +129,7 @@ export default function Index() {
           style={styles.image}
           source={require("@/assets/images/cloud-rain.svg")}
         />
-        <Text style={styles.bigText}>{temperature}</Text>
+        <Text style={styles.bigText}>{temperature}°C</Text>
       </View>
 
       <View style={styles.top2}>
@@ -192,25 +143,17 @@ export default function Index() {
             style={styles.icon}
             source={require("@/assets/images/sea-drop.png")}
           />
-          <Text style={styles.infoNumber}>{humidity}</Text>
+          <Text style={styles.infoNumber}>{humidity}%</Text>
           <Text style={styles.infoLabel}>Umidade</Text>
         </View>
 
-        <View style={styles.infoView}>
-          <Image
-            style={styles.icon}
-            source={require("@/assets/images/barometer.png")}
-          />
-          <Text style={styles.infoNumber}>{pressure}</Text>
-          <Text style={styles.infoLabel}>Pressão Atmosférica</Text>
-        </View>
 
         <View style={styles.infoView}>
           <Image
             style={styles.icon}
             source={require("@/assets/images/umbrella.png")}
           />
-          <Text style={styles.infoNumber}>{rain}</Text>
+          <Text style={styles.infoNumber}>{rain}%</Text>
           <Text style={styles.infoLabel}>Chuva</Text>
         </View>
       </View>
@@ -218,20 +161,10 @@ export default function Index() {
       <View style={styles.inline}>
         <ButtonTouchable
           onClick={() => {
-            changeState(client, "estacao/window", !window);
-            saveFile(String(!window), "window.txt");
-            saveDataDB(temperature, humidity, pressure, rain)
+            changeState(client, "estacao/window", window === 'open' ? 'close' : 'open');
+            saveFile(window === 'open' ? 'close' : 'open', "window.txt");
           }}
           icon="window"
-        />
-
-        <ButtonTouchable
-          onClick={() => {
-            changeState(client, "estacao/clothesHanging", !clothesHanging);
-            saveFile(String(!clothesHanging), "clothesHanging.txt");
-            getDataDB()
-          }}
-          icon="clothes"
         />
       </View>
     </ThemedView>
@@ -294,7 +227,7 @@ const styles = StyleSheet.create({
     width: 273,
     height: 100,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     marginBottom: 40,
   },
   image: {
