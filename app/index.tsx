@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { ThemedView } from "@/components/ThemedView";
+
 import { ButtonTouchable } from "@/components/ButtonTouchable";
+import { Hour } from "@/components/Hour"
+
 import { Link } from "expo-router";
 
 import Paho from "paho-mqtt";
@@ -127,10 +130,7 @@ export default function Index() {
         <Text style={styles.bigText}>{temperature}°C</Text>
       </View>
 
-      <View style={styles.top2}>
-        <Text style={styles.local}>Maracanaú - Ceará</Text>
-        <Text style={styles.hour}>10:30</Text>
-      </View>
+      <Hour />
 
       <View style={styles.infoViewTop}>
         <View style={styles.infoView}>
