@@ -23,6 +23,8 @@ import {
   sendNotificiation,
 } from "@/services/notifications";
 
+import { generatePDF } from "@/services/reports";
+
 const client = new Paho.Client(
   "broker.hivemq.com",
   Number(8000),
@@ -53,31 +55,24 @@ export default function Index() {
 
   const fetchData = async () => {
     try {
-      // Primeira requisição
       const sensorResponse = await fetch('http://automate-house-production.up.railway.app/sensor/last');
       const sensorJson = await sensorResponse.json();
       
-      // Atualizando o estado com as respostas do sensor
       setTemperature(sensorJson.temperature);
       setHumidity(sensorJson.humidity);
       setTimestamp(sensorJson.timestamp);
       
-      // Segunda requisição
       const windowResponse = await fetch('http://automate-house-production.up.railway.app/window/state');
       const windowJson = await windowResponse.json();
       
-      // Atualizando o estado do estado da janela
       setWindow(windowJson.state);
   
-      // Agora que o estado está atualizado, você pode salvar no banco de dados
       saveFile(sensorJson.temperature, "temperature.txt");
       saveFile(sensorJson.humidity, "humidity.txt");
       saveFile(windowJson.state, "window.txt");
       
-      // Salvar os dados no banco de dados, com os valores já obtidos
       await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
       
-      // Exibir os dados do banco de dados (se necessário)
       await getDataDB();
   
     } catch (error: any) {
@@ -160,6 +155,14 @@ export default function Index() {
 
       <View style={styles.inline}>
         <ButtonTouchable
+          onClick={async () => {
+            const data = await getDataDB()
+            generatePDF(data)
+          }}
+          icon="pdf"
+        />
+        
+        <ButtonTouchable
           onClick={() => {
             changeState(client, "estacao/window", window === 'open' ? 'close' : 'open');
             saveFile(window === 'open' ? 'close' : 'open', "window.txt");
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     width: 273,
     height: 100,
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     marginBottom: 40,
   },
   image: {
