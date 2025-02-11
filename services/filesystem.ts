@@ -3,7 +3,9 @@ import * as FileSystem from "expo-file-system";
 const saveFile = async (value: string, directory: string) => {
     const path = `${FileSystem.documentDirectory}${directory}`;
     try {
-      await FileSystem.writeAsStringAsync(path, value);
+      await FileSystem.writeAsStringAsync(path, String(value), {
+        encoding: FileSystem.EncodingType.UTF8
+      });
       console.log("Arquivo salvo!");
     } catch (error) {
       console.error("Erro ao salvar arquivo:", error);
