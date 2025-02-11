@@ -16,7 +16,7 @@ export function ButtonTouchable({ onClick, icon } : buttonProps ) {
         >
             <Image
                 style={styles.icon}
-                source={icon === 'clothes' ? require('@/assets/images/clothes.png') : require('@/assets/images/window.svg')}
+                source={icon === 'pdf' ? require('@/assets/images/pdf.png') : require('@/assets/images/window.svg')}
             />
         </TouchableOpacity>
     )
