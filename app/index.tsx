@@ -64,8 +64,9 @@ export default function Index() {
     }
   }
 
-  const send = async() => {
-    const windowJSON = JSON.stringify({state: window === "open" ? "closed" : "open"})
+  const changeWindow = async() => {
+    const windowNow = (window === "open" ? "closed": "open")
+    const windowJSON = JSON.stringify({state: windowNow})
 
     const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/control', {
       headers: {
@@ -74,6 +75,8 @@ export default function Index() {
       method: "POST",
       body: windowJSON
     })
+
+    setWindow(windowNow)
   }
 
   useEffect(() => {
@@ -146,7 +149,7 @@ export default function Index() {
         <ButtonTouchable
           onClick={() => {
             saveFile(window === 'open' ? 'close' : 'open', "window.txt");
-            send()
+            changeWindow()
           }}
           icon="window"
         />
