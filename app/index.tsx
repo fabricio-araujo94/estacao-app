@@ -5,10 +5,6 @@ import { ThemedView } from "@/components/ThemedView";
 import { ButtonTouchable } from "@/components/ButtonTouchable";
 import { Hour } from "@/components/Hour"
 
-import { Link } from "expo-router";
-
-import Paho from "paho-mqtt";
-
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
@@ -16,7 +12,6 @@ import {
   initializeDB,
   saveDataDB,
   getDataDB,
-  deleteDataDB,
 } from "@/services/database";
 
 import { saveFile, readFile } from "@/services/filesystem";
@@ -28,13 +23,6 @@ import {
 
 import { generatePDF } from "@/services/reports";
 
-const client = new Paho.Client(
-  "broker.hivemq.com",
-  Number(8000),
-  `mqtt-async-test-${parseInt(String(Math.random() * 100).toString())}`
-);
-
-
 export default function Index() {
   const [temperature, setTemperature] = useState("0");
   const [humidity, setHumidity] = useState("0");
@@ -42,42 +30,35 @@ export default function Index() {
   const [timestamp, setTimestamp] = useState("");
   const [window, setWindow] = useState("open");
 
-  const onMessage = (newMessage: Paho.Message) => {
-    console.log(newMessage.payloadString)
-  }
-
-  function changeState(c: Paho.Client, topic: string, message: string) {
-    try {
-      const newMessage = new Paho.Message(message);
-      newMessage.destinationName = topic;
-      c.send(newMessage);  
-    } catch (error: any) {
-      console.log("Error: ", error.message)
-    }
-  }
-
   const fetchData = async () => {
     try {
       const sensorResponse = await fetch('http://automate-house-production.up.railway.app/sensor/last');
       const sensorJson = await sensorResponse.json();
       
-      setTemperature(sensorJson.temperature);
-      setHumidity(sensorJson.humidity);
-      setTimestamp(sensorJson.timestamp);
-      
       const windowResponse = await fetch('http://automate-house-production.up.railway.app/window/state');
       const windowJson = await windowResponse.json();
       
-      setWindow(windowJson.state);
-  
-      saveFile(sensorJson.temperature, "temperature.txt");
-      saveFile(sensorJson.humidity, "humidity.txt");
-      saveFile(windowJson.state, "window.txt");
+      if(windowJson.state !== window) {
+        setWindow(windowJson.state);
+        saveFile(windowJson.state, "window.txt")
+
+        if(windowJson.state === "open") {
+          sendNotificiation("Janela", "Por causa da chuva, as janelas foram fechadas.")
+        } else {
+          sendNotificiation("Janela", "As janelas foram abertas.")
+        }
+      }
       
-      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
+      if(sensorJson.temperature !== temperature || sensorJson.humidity !== humidity) {
+        saveFile(sensorJson.temperature, "temperature.txt");
+        saveFile(sensorJson.humidity, "humidity.txt");
+        await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
+      }
       
-      await getDataDB();
-  
+      setTemperature(sensorJson.temperature);
+      setHumidity(sensorJson.humidity);
+      setTimestamp(sensorJson.timestamp);
+
     } catch (error: any) {
       console.log("Error ", error.message);
     }
@@ -93,9 +74,6 @@ export default function Index() {
       method: "POST",
       body: windowJSON
     })
-
-    console.log("Enviado state")
-    console.log(windowResponse.ok)
   }
 
   useEffect(() => {
@@ -104,28 +82,12 @@ export default function Index() {
 
       requestNotificationPermission();
 
-      client.connect({
-        onSuccess: () => {
-          console.log("Connected");
-          client.subscribe("estacao/#");
-          client.onMessageArrived = onMessage;
-        },
-        onFailure: () => {
-          console.log("Failed to connect");
-        },
-        useSSL: true,
-        
-        
-      });
-
       setTemperature(await readFile("temperature.txt"));
       setHumidity(await readFile("humidity.txt"));
       setRain(await readFile("rain.txt"));
       setWindow(await readFile("window.txt"));
     };
 
-    send()
-  
     loadData();
     
     const interval = setInterval(fetchData, 10000);

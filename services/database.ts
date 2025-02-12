@@ -63,8 +63,6 @@ const deleteDataDB = async () => {
 const getDataDB = async () => {
   const allRows = await db.getAllAsync(`SELECT * FROM estacao`);
 
-  console.log(allRows);
-
   return allRows;
 };
 

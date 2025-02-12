@@ -48,6 +48,8 @@ export function Hour() {
           estado: endereco.region!,
         });
 
+        saveFile(localization.cidade, "cidade.txt")
+        saveFile(localization.estado, "estado.txt")
       }
     } catch (error: any) {
       console.log('Erro ao obter localização: ' + error.message);
@@ -61,14 +63,15 @@ export function Hour() {
       setHour(new Date());
     }, 1000);
 
-    return () => clearInterval(timer); // Limpa o intervalo ao desmontar
+
+    return () => clearInterval(timer); 
   }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.local}>{localization.cidade} - {localization.estado}</Text>
       <Text style={styles.hour}>
-        {hour.getHours()}:{hour.getMinutes()}
+        {hour.getHours()}:{String(hour.getMinutes()).padStart(2, '0')}
       </Text>
     </View>
   );
