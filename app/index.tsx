@@ -83,6 +83,21 @@ export default function Index() {
     }
   }
 
+  const send = async() => {
+    const windowJSON = JSON.stringify({state: window === "open" ? "closed" : "open"})
+
+    const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/control', {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      method: "POST",
+      body: windowJSON
+    })
+
+    console.log("Enviado state")
+    console.log(windowResponse.ok)
+  }
+
   useEffect(() => {
     const loadData = async () => {
       initializeDB();
@@ -98,6 +113,9 @@ export default function Index() {
         onFailure: () => {
           console.log("Failed to connect");
         },
+        useSSL: true,
+        
+        
       });
 
       setTemperature(await readFile("temperature.txt"));
@@ -106,6 +124,7 @@ export default function Index() {
       setWindow(await readFile("window.txt"));
     };
 
+    send()
   
     loadData();
     
@@ -164,8 +183,8 @@ export default function Index() {
         
         <ButtonTouchable
           onClick={() => {
-            changeState(client, "estacao/window", window === 'open' ? 'close' : 'open');
             saveFile(window === 'open' ? 'close' : 'open', "window.txt");
+            send()
           }}
           icon="window"
         />
@@ -197,13 +216,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 40,
-  },
-  top2: {
-    width: 130,
-    height: 41,
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 120,
   },
   infoViewTop: {
     flexDirection: "row",
@@ -246,16 +258,6 @@ const styles = StyleSheet.create({
     fontSize: 64,
     top: -16,
     fontFamily: "Itim",
-  },
-  local: {
-    fontSize: 15,
-    fontFamily: "Itim",
-    opacity: 0.67,
-  },
-  hour: {
-    fontSize: 24,
-    fontFamily: "Caprasimo",
-    opacity: 0.53,
   },
   infoNumber: {
     fontSize: 16,
