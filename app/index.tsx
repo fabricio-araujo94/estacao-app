@@ -35,6 +35,13 @@ export default function Index() {
       const sensorResponse = await fetch('https://automate-house-production.up.railway.app/sensor/last');
       const sensorJson = await sensorResponse.json();
       
+      setTemperature(sensorJson.temperature);
+      setHumidity(sensorJson.humidity);
+      setTimestamp(sensorJson.timestamp);
+      
+      saveFile(sensorJson.temperature, "temperature.txt");
+      saveFile(sensorJson.humidity, "humidity.txt");
+      
       const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/state');
       const windowJson = await windowResponse.json();
       
@@ -49,15 +56,7 @@ export default function Index() {
         }
       }
       
-      if(sensorJson.temperature !== temperature || sensorJson.humidity !== humidity) {
-        saveFile(sensorJson.temperature, "temperature.txt");
-        saveFile(sensorJson.humidity, "humidity.txt");
-        await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
-      }
-      
-      setTemperature(sensorJson.temperature);
-      setHumidity(sensorJson.humidity);
-      setTimestamp(sensorJson.timestamp);
+      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
 
     } catch (error: any) {
       console.log("Error ", error.message);
@@ -84,6 +83,8 @@ export default function Index() {
       initializeDB();
 
       requestNotificationPermission();
+
+      await fetchData()
 
       setTemperature(await readFile("temperature.txt"));
       setHumidity(await readFile("humidity.txt"));
