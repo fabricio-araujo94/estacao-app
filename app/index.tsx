@@ -32,10 +32,10 @@ export default function Index() {
 
   const fetchData = async () => {
     try {
-      const sensorResponse = await fetch('http://automate-house-production.up.railway.app/sensor/last');
+      const sensorResponse = await fetch('https://automate-house-production.up.railway.app/sensor/last');
       const sensorJson = await sensorResponse.json();
       
-      const windowResponse = await fetch('http://automate-house-production.up.railway.app/window/state');
+      const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/state');
       const windowJson = await windowResponse.json();
       
       if(windowJson.state !== window) {
