@@ -21,13 +21,15 @@ import {
   sendNotificiation,
 } from "@/services/notifications";
 
+import { getForecast } from "@/services/OpenMeteo";
+
 import { generatePDF } from "@/services/reports";
 
 export default function Index() {
   const [temperature, setTemperature] = useState("0");
   const [humidity, setHumidity] = useState("0");
-  const [rain, setRain] = useState("0");
-  const [timestamp, setTimestamp] = useState("");
+  const [rain, setRain] = useState<string | undefined>();
+  const [timestamp, setTimestamp] = useState("0");
   const [window, setWindow] = useState("open");
 
   const fetchData = async () => {
@@ -56,7 +58,7 @@ export default function Index() {
         }
       }
       
-      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain, sensorJson.timestamp);
+      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain!, sensorJson.timestamp);
 
     } catch (error: any) {
       console.log("Error ", error.message);
@@ -84,11 +86,14 @@ export default function Index() {
 
       requestNotificationPermission();
 
-      await fetchData()
+      await fetchData();
+
+      const date = new Date()
+      const forecast = await getForecast()
+      setRain(String(forecast.hourly.precipitationProbability[date.getHours()]))
 
       setTemperature(await readFile("temperature.txt"));
       setHumidity(await readFile("humidity.txt"));
-      setRain(await readFile("rain.txt"));
       setWindow(await readFile("window.txt"));
     };
 
