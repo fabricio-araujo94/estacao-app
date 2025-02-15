@@ -11,15 +11,7 @@ export function Hour() {
     estado: ""
   })
 
-  const getLocation = async () => {
-    var cidade = await readFile("cidade.txt")
-    var estado = await readFile("estado.txt")
-
-    setLocalization({
-      cidade: cidade,
-      estado: estado
-    })
-
+  const getLocation = async () => {   
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       
@@ -48,8 +40,6 @@ export function Hour() {
           estado: endereco.region!,
         });
 
-        saveFile(localization.cidade, "cidade.txt")
-        saveFile(localization.estado, "estado.txt")
       }
     } catch (error: any) {
       console.log('Erro ao obter localização: ' + error.message);
@@ -57,7 +47,7 @@ export function Hour() {
   }
 
   useEffect(() => {
-    getLocation()
+    getLocation();
 
     const timer = setInterval(() => {
       setHour(new Date());
