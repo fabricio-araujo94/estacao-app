@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  RefreshControl,
+} from "react-native";
 import { ThemedView } from "@/components/ThemedView";
 
 import { ButtonTouchable } from "@/components/ButtonTouchable";
-import { Hour } from "@/components/Hour"
+import { Hour } from "@/components/Hour";
 
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 
-import {
-  initializeDB,
-  saveDataDB,
-  getDataDB,
-} from "@/services/database";
+import { initializeDB, saveDataDB, getDataDB } from "@/services/database";
 
 import { saveFile, readFile } from "@/services/filesystem";
 
@@ -28,57 +31,87 @@ import { generatePDF } from "@/services/reports";
 export default function Index() {
   const [temperature, setTemperature] = useState("0");
   const [humidity, setHumidity] = useState("0");
-  const [rain, setRain] = useState<string | undefined>();
+  const [rain, setRain] = useState("0");
   const [timestamp, setTimestamp] = useState("0");
   const [window, setWindow] = useState("open");
+  const [isRefresh, setIsRefresh] = useState(false);
 
   const fetchData = async () => {
     try {
-      const sensorResponse = await fetch('https://automate-house-production.up.railway.app/sensor/last');
+      const sensorResponse = await fetch(
+        "https://automate-house-production.up.railway.app/sensor/last"
+      );
       const sensorJson = await sensorResponse.json();
-      
+
       setTemperature(sensorJson.temperature);
       setHumidity(sensorJson.humidity);
       setTimestamp(sensorJson.timestamp);
-      
+
       saveFile(sensorJson.temperature, "temperature.txt");
       saveFile(sensorJson.humidity, "humidity.txt");
-      
-      const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/state');
-      const windowJson = await windowResponse.json();
-      
-      if(windowJson.state !== window) {
-        setWindow(windowJson.state);
-        saveFile(windowJson.state, "window.txt")
 
-        if(windowJson.state === "open") {
-          sendNotificiation("Janela", "Por causa da chuva, as janelas foram fechadas.")
+      const windowResponse = await fetch(
+        "https://automate-house-production.up.railway.app/window/state"
+      );
+      const windowJson = await windowResponse.json();
+
+      if (windowJson.state !== window) {
+        if (windowJson.state === "open") {
+          sendNotificiation(
+            "Janela",
+            "Por causa da chuva, as janelas foram fechadas."
+          );
         } else {
-          sendNotificiation("Janela", "As janelas foram abertas.")
+          sendNotificiation("Janela", "As janelas foram abertas.");
         }
       }
-      
-      await saveDataDB(sensorJson.temperature, sensorJson.humidity, rain!, sensorJson.timestamp);
 
+      setWindow(windowJson.state);
+      saveFile(windowJson.state, "window.txt");
+
+      const date = new Date();
+      const forecast = await getForecast();
+      const precipitationProbability = String(
+        forecast.hourly.precipitationProbability[date.getHours()]
+      );
+      setRain(precipitationProbability);
+      saveFile(precipitationProbability, "rain.txt");
+
+      await saveDataDB(
+        sensorJson.temperature,
+        sensorJson.humidity,
+        precipitationProbability,
+        sensorJson.timestamp
+      );
     } catch (error: any) {
       console.log("Error ", error.message);
+    } finally {
+      setIsRefresh(false);
     }
-  }
+  };
 
-  const changeWindow = async() => {
-    const windowNow = (window === "open" ? "closed": "open")
-    const windowJSON = JSON.stringify({state: windowNow})
+  const changeWindow = async () => {
+    const windowNow = window === "open" ? "closed" : "open";
+    const windowJSON = JSON.stringify({ state: windowNow });
 
-    const windowResponse = await fetch('https://automate-house-production.up.railway.app/window/control', {
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      method: "POST",
-      body: windowJSON
-    })
+    const windowResponse = await fetch(
+      "https://automate-house-production.up.railway.app/window/control",
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+        body: windowJSON,
+      }
+    );
 
-    setWindow(windowNow)
-  }
+    setWindow(windowNow);
+  };
+
+  const pullToRefresh = () => {
+    setIsRefresh(true);
+    fetchData();
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -86,81 +119,77 @@ export default function Index() {
 
       requestNotificationPermission();
 
-      await fetchData();
-
-      const date = new Date()
-      const forecast = await getForecast()
-      setRain(String(forecast.hourly.precipitationProbability[date.getHours()]))
-
       setTemperature(await readFile("temperature.txt"));
       setHumidity(await readFile("humidity.txt"));
+      setRain(await readFile("rain.txt"));
       setWindow(await readFile("window.txt"));
     };
 
     loadData();
-    
-    const interval = setInterval(fetchData, 10000);
-    
-    return () => clearInterval(interval);
-
   }, []);
 
   return (
-    <ThemedView style={styles.container}>
-      <LinearGradient
-        colors={["#FFFFFF", "#999999"]}
-        style={styles.background}
-      />
-
-      <View style={styles.top}>
-        <Image
-          style={styles.image}
-          source={require("@/assets/images/cloud-rain.svg")}
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={isRefresh} onRefresh={pullToRefresh} />
+        }
+      >
+        <LinearGradient
+          colors={["#FFFFFF", "#999999"]}
+          style={styles.background}
         />
-        <Text style={styles.bigText}>{temperature}°C</Text>
-      </View>
 
-      <Hour />
-
-      <View style={styles.infoViewTop}>
-        <View style={styles.infoView}>
+        <View style={styles.top}>
           <Image
-            style={styles.icon}
-            source={require("@/assets/images/sea-drop.png")}
+            style={styles.image}
+            source={require("@/assets/images/cloud-rain.svg")}
           />
-          <Text style={styles.infoNumber}>{humidity}%</Text>
-          <Text style={styles.infoLabel}>Umidade</Text>
+          <Text style={styles.bigText}>{temperature}°C</Text>
         </View>
 
+        <Hour />
 
-        <View style={styles.infoView}>
-          <Image
-            style={styles.icon}
-            source={require("@/assets/images/umbrella.png")}
-          />
-          <Text style={styles.infoNumber}>{rain}%</Text>
-          <Text style={styles.infoLabel}>Chuva</Text>
+        <View style={styles.infoViewTop}>
+          <View style={styles.infoView}>
+            <Image
+              style={styles.icon}
+              source={require("@/assets/images/sea-drop.png")}
+            />
+            <Text style={styles.infoNumber}>{humidity}%</Text>
+            <Text style={styles.infoLabel}>Umidade</Text>
+          </View>
+
+          <View style={styles.infoView}>
+            <Image
+              style={styles.icon}
+              source={require("@/assets/images/umbrella.png")}
+            />
+            <Text style={styles.infoNumber}>{rain}%</Text>
+            <Text style={styles.infoLabel}>Chuva</Text>
+          </View>
         </View>
-      </View>
 
-      <View style={styles.inline}>
-        <ButtonTouchable
-          onClick={async () => {
-            const data = await getDataDB()
-            generatePDF(data)
-          }}
-          icon="pdf"
-        />
-        
-        <ButtonTouchable
-          onClick={() => {
-            saveFile(window === 'open' ? 'close' : 'open', "window.txt");
-            changeWindow()
-          }}
-          icon="window"
-        />
-      </View>
-    </ThemedView>
+        <View style={styles.inline}>
+          <ButtonTouchable
+            onClick={async () => {
+              const data = await getDataDB();
+              generatePDF(data);
+            }}
+            icon="pdf"
+          />
+
+          <ButtonTouchable
+            onClick={() => {
+              saveFile(window === "open" ? "close" : "open", "window.txt");
+              changeWindow();
+            }}
+            icon="window"
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -168,7 +197,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
-    height: "100%",
+    height: "200%",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#fff",
@@ -178,7 +207,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: "100%",
+    height: "102%",
     zIndex: -1,
   },
   top: {
@@ -239,5 +268,9 @@ const styles = StyleSheet.create({
     fontFamily: "Itim",
     opacity: 0.7,
     textAlign: "center",
+  },
+  scrollView: {
+    width: "100%",
+    height: "100%",
   },
 });
