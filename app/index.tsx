@@ -27,6 +27,7 @@ import {
 import { getForecast } from "@/services/OpenMeteo";
 
 import { generatePDF } from "@/services/reports";
+import { TopTemperature } from "@/components/TopTemperature";
 
 export default function Index() {
   const [temperature, setTemperature] = useState("0");
@@ -141,13 +142,7 @@ export default function Index() {
           style={styles.background}
         />
 
-        <View style={styles.top}>
-          <Image
-            style={styles.image}
-            source={require("@/assets/images/cloud-rain.svg")}
-          />
-          <Text style={styles.bigText}>{temperature}°C</Text>
-        </View>
+        <TopTemperature temperature={temperature}/>
 
         <Hour />
 
@@ -210,13 +205,6 @@ const styles = StyleSheet.create({
     height: "102%",
     zIndex: -1,
   },
-  top: {
-    width: "100%",
-    height: 172,
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 40,
-  },
   infoViewTop: {
     flexDirection: "row",
     width: 334,
@@ -253,11 +241,6 @@ const styles = StyleSheet.create({
   icon: {
     width: 24,
     height: 24,
-  },
-  bigText: {
-    fontSize: 64,
-    top: -16,
-    fontFamily: "Itim",
   },
   infoNumber: {
     fontSize: 16,
