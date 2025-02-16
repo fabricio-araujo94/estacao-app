@@ -26,9 +26,9 @@ const saveDataDB = async (
   temperature: string,
   humidity: string,
   rain: string,
-  timestamp: string
+  timestamp: Date
 ) => {
-  const date = new Date(timestamp);
+  
 
   const result = await db.runAsync(
     "INSERT INTO estacao (temperature, humidity, rain, timestamp) VALUES (?, ?, ?, ?)",
@@ -36,7 +36,7 @@ const saveDataDB = async (
       temperature,
       humidity,
       rain,
-      date.toLocaleDateString("pt-BR", {
+      timestamp.toLocaleDateString("pt-BR", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",

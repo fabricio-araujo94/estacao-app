@@ -55,7 +55,11 @@ const generatePDF = async (data: any) => {
 
   const { uri } = await Print.printToFileAsync({ html: htmlContent });
 
-  await Sharing.shareAsync(uri)
+  await Sharing.shareAsync(uri, {
+    mimeType: 'application/pdf',
+    dialogTitle: 'Imprimir Relatório',
+    UTI: 'com.adobe.pdf'
+  });
 
   console.log('PDF gerado em:', uri);
 };
