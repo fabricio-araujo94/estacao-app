@@ -11,8 +11,6 @@ type State = {
 };
 
 const initializeDB = () => {
-  db.execSync(`DROP TABLE estacao;`);
-
   db.execSync(`CREATE TABLE IF NOT EXISTS estacao (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp DATETIME,
