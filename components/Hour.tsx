@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
 import * as Location from "expo-location"
 
-import { saveFile, readFile } from "@/services/filesystem";
+import { rS, rMS } from "@/styles/responsive";
 
 export function Hour() {
   const [hour, setHour] = useState(new Date());
@@ -70,18 +70,18 @@ export function Hour() {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    height: 41,
+    height: rS(41),
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 120,
+    marginTop: rMS(10, 2),
+    marginBottom: rMS(60, 2),
   },
   local: {
-    fontSize: 15,
+    fontSize: rS(17),
     fontFamily: "Itim",
     opacity: 0.67,
   },
   hour: {
-    fontSize: 24,
+    fontSize: rS(22),
     fontFamily: "Caprasimo",
     opacity: 0.53,
   },

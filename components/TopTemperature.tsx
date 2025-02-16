@@ -1,5 +1,7 @@
 import { Image } from "expo-image";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Dimensions } from "react-native";
+
+import { rS, rVS, rMS } from "@/styles/responsive";
 
 export interface Props {
     temperature?: string
@@ -19,21 +21,19 @@ export function TopTemperature({temperature = "0"}: Props) {
 
 const styles = StyleSheet.create({
   top: {
-    width: "100%",
-    height: 172,
+    height: rVS(172),
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: rMS(40, 2),
   },
   image: {
-    width: 122,
-    height: 122,
-    marginTop: 20,
+    width: rS(122),
+    height: rS(122),
   },
 
   bigText: {
-    fontSize: 64,
-    top: -16,
+    fontSize: rS(64),
+    top: rMS(-16, -2),
     fontFamily: "Itim",
   },
 });

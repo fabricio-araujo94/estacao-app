@@ -1,5 +1,7 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { Image } from "react-native";
+
+import { rS, rVS, rMS } from "@/styles/responsive";
 
 export interface Props {
   humidity?: string;
@@ -34,35 +36,35 @@ export function InfoViewTop({ humidity = "0", rain = "0", stylesView }: Props) {
 const styles = StyleSheet.create({
   infoViewTop: {
     flexDirection: "row",
-    height: 107,
+    height: rVS(100),
     backgroundColor: "#D9D9D9",
     borderRadius: 150,
     borderColor: "#000000",
     borderWidth: 0.5,
     elevation: 10, // Sombra para Android
     shadowColor: "#000000", // Sombra para iOS
-    shadowOffset: { width: -2, height: 4 },
+    shadowOffset: { width: rS(-2), height: rS(4) },
     shadowOpacity: 0.75,
     shadowRadius: 4,
-    marginLeft: 20,
-    marginRight: 20
+    marginLeft: rMS(20, 1.5),
+    marginRight: rMS(20, 1.5)
   },
   infoView: {
     flex: 1,
-    width: 105,
+    width: rS(105),
     alignItems: "center",
     justifyContent: "center",
   },
   icon: {
-    width: 24,
-    height: 24,
+    width: rS(24),
+    height: rS(24),
   },
   infoNumber: {
-    fontSize: 16,
+    fontSize: rS(18),
     fontFamily: "Itim",
   },
   infoLabel: {
-    fontSize: 13,
+    fontSize: rS(13),
     fontFamily: "Itim",
     opacity: 0.7,
     textAlign: "center",

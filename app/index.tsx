@@ -1,14 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  View,
-  Text,
   StyleSheet,
   SafeAreaView,
   ScrollView,
   RefreshControl,
+  Dimensions,
 } from "react-native";
 
-import { ButtonTouchable } from "@/components/ButtonTouchable";
 import { Hour } from "@/components/Hour";
 
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,34 +25,56 @@ import { getForecast } from "@/services/OpenMeteo";
 import { generatePDF } from "@/services/reports";
 import { TopTemperature } from "@/components/TopTemperature";
 import { InfoViewTop } from "@/components/InfoViewTop";
+import { Buttons } from "@/components/Buttons";
+
+const { width, height } = Dimensions.get("window")
 
 export default function Index() {
   const [temperature, setTemperature] = useState("0");
   const [humidity, setHumidity] = useState("0");
   const [rain, setRain] = useState("0");
-  const [timestamp, setTimestamp] = useState("0");
-  const [window, setWindow] = useState("open");
+  const [timestamp, setTimestamp] = useState(new Date());
+  const [window, setWindow] = useState("");
   const [isRefresh, setIsRefresh] = useState(false);
+  
+  const windowRef = useRef(window);
+  const previousData = useRef({
+    temperature: "0",
+    humidity: "0",
+    rain: "0",
+    timestamp: new Date()
+  });
 
   const fetchWindow = async () => {
     try {
       const windowResponse = await fetch(
         "https://automate-house-production.up.railway.app/window/state"
       );
+      
+      // Verificar se a resposta é válida
+      if (!windowResponse.ok) throw new Error("Falha na requisição da janela");
+      
       const windowJson = await windowResponse.json();
-
-      if (windowJson.state != window) {
-        if (windowJson.state === "open") {
-          sendNotificiation(
-            "Janela",
-            "Por causa da chuva, as janelas foram fechadas."
-          );
-        } else {
-          sendNotificiation("Janela", "As janelas foram abertas.");
-        }
-
-        setWindow(windowJson.state);
-        saveFile(windowJson.state, "window.txt");
+      const newState = String(windowJson.state);
+  
+      // Usar a referência para comparação precisa
+      if (newState !== windowRef.current) {
+        console.log(`Mudança de estado: ${windowRef.current} → ${newState}`);
+  
+        // Atualizar tanto o estado quanto a referência
+        setWindow(newState);
+        windowRef.current = newState;
+  
+        // Enviar notificação com o novo estado
+        sendNotificiation(
+          "Janela",
+          newState === "open" 
+            ? "As janelas foram abertas." 
+            : "Por causa da chuva, as janelas foram fechadas."
+        );
+  
+        // Salvar no filesystem
+        await saveFile(newState, "window.txt");
       }
     } catch (error: any) {
       console.log("Error ", error.message);
@@ -63,52 +83,40 @@ export default function Index() {
 
   const fetchData = async () => {
     try {
-      const sensorResponse = await fetch(
-        "https://automate-house-production.up.railway.app/sensor/last"
-      );
+      const sensorResponse = await fetch("https://automate-house-production.up.railway.app/sensor/last");
       const sensorJson = await sensorResponse.json();
-
+      
       const newData = {
         temperature: sensorJson.temperature,
         humidity: sensorJson.humidity,
-        timestamp: sensorJson.timestamp,
+        timestamp: new Date(),
+        rain: String((await getForecast())!.hourly.precipitationProbability[new Date().getHours()])
       };
 
       const hasChanges = 
-        newData.temperature !== temperature ||
-        newData.humidity !== humidity ||
-        newData.timestamp !== timestamp;
+        newData.temperature !== previousData.current.temperature ||
+        newData.humidity !== previousData.current.humidity ||
+        newData.rain !== previousData.current.rain;
 
       if (hasChanges) {
+        console.log(`Mudança de estado: ${previousData.current.temperature} → ${newData.temperature}`);
+        console.log(`Mudança de estado: ${previousData.current.humidity} → ${newData.humidity}`);
+        console.log(`Mudança de estado: ${previousData.current.timestamp} → ${newData.timestamp}`);
+        console.log(`Mudança de estado: ${previousData.current.rain} → ${newData.rain}`);
+
         setTemperature(newData.temperature);
         setHumidity(newData.humidity);
+        setRain(newData.rain);
         setTimestamp(newData.timestamp);
-
-        await saveFile(newData.temperature, "temperature.txt");
-        await saveFile(newData.humidity, "humidity.txt");
-      }
-
-      await fetchWindow();
-
-      const date = new Date();
-      const forecast = await getForecast();
-      const precipitationProbability = String(
-        forecast.hourly.precipitationProbability[date.getHours()]
-      );
-
-      const rainChanged = precipitationProbability !== rain;
-      if (rainChanged) {
-        setRain(precipitationProbability);
-        await saveFile(precipitationProbability, "rain.txt");
-      }
-
-      if (hasChanges) {
-        await saveDataDB(
-          newData.temperature,
-          newData.humidity,
-          precipitationProbability,
-          newData.timestamp
-        );
+        
+        previousData.current = newData;
+        
+        await Promise.all([
+          saveFile(newData.temperature, "temperature.txt"),
+          saveFile(newData.humidity, "humidity.txt"),
+          saveFile(newData.rain, "rain.txt"),
+          saveDataDB(newData.temperature, newData.humidity, newData.rain, newData.timestamp)
+        ]);
       }
 
     } catch (error: any) {
@@ -133,11 +141,17 @@ export default function Index() {
           body: windowJSON,
         }
       );
-
+      
       setWindow(windowNow);
+      saveFile(windowNow, "window.txt");
     } catch (error: any) {
       console.log("Error: " + error.message);
     }
+  };
+
+  const createPDF = async () => {
+    const data = await getDataDB();
+    generatePDF(data);
   };
 
   const pullToRefresh = () => {
@@ -151,10 +165,20 @@ export default function Index() {
 
       requestNotificationPermission();
 
-      setTemperature("20");
-      setHumidity(await readFile("humidity.txt"));
-      setRain(await readFile("rain.txt"));
-      setWindow(await readFile("window.txt"));
+      const actualData = {
+        temperature: await readFile("temperature.txt"),
+        humidity: await readFile("humidity.txt"),
+        timestamp: new Date(),
+        rain: await readFile("rain.txt")
+      };
+      
+      previousData.current = actualData
+      windowRef.current = await readFile("window.txt")
+      
+      setTemperature(previousData.current.temperature)
+      setHumidity(previousData.current.humidity);
+      setRain(previousData.current.rain);
+      setWindow(windowRef.current)
     };
 
     loadData();
@@ -164,8 +188,14 @@ export default function Index() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const interval = setInterval(fetchData, 60000);
+
+    return () => clearInterval(interval)
+  }, [])
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} >
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -184,26 +214,9 @@ export default function Index() {
         <InfoViewTop
           humidity={humidity}
           rain={rain}
-          stylesView={{ margin: 20 }}
         />
 
-        <View style={styles.inline}>
-          <ButtonTouchable
-            onClick={async () => {
-              const data = await getDataDB();
-              generatePDF(data);
-            }}
-            icon="pdf"
-          />
-
-          <ButtonTouchable
-            onClick={() => {
-              saveFile(window === "open" ? "close" : "open", "window.txt");
-              changeWindow();
-            }}
-            icon="window"
-          />
-        </View>
+        <Buttons createPDF={createPDF} changeWindow={changeWindow} isOpen={window}/>
       </ScrollView>
     </SafeAreaView>
   );
@@ -212,11 +225,9 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
   background: {
     position: "absolute",
@@ -224,23 +235,9 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    height: "150%",
+    width: width,
+    height: height,
     zIndex: -1,
-  },
-  inline: {
-    height: 100,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    margin: 40,
-  },
-  image: {
-    width: 122,
-    height: 122,
-    marginTop: 20,
-  },
-  icon: {
-    width: 24,
-    height: 24,
   },
   scrollView: {
     width: "100%",
